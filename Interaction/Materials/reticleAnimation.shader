@@ -72,7 +72,7 @@
                 c*=_Data.z;
 
                 dist = 1-smoothstep(_Data.x,_Data.x+.001,c);
-                float percent = smoothstep(_Percent,_Percent+.001,tc_polar.y);
+                float percent = smoothstep(1-_Percent,1-_Percent+.001,tc_polar.y);
                 return (1-dist)*(1-percent);
             }
             ENDCG
