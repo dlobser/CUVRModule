@@ -17,14 +17,16 @@ namespace CUVR{
 
     	public delegate void MouseHasHit();
     	public static event MouseHasHit mouseHasHit;
-        [Tooltip("turn this off to only raycast when a button is clicked")]
+        [Tooltip("Turn this off to only raycast when a button is clicked")]
         public bool alwaysActive = true;
         [Tooltip("Drag in a button component, or leave this slot empty")]
         public Button button;
         float click;
         int layerMask;
-        [Tooltip("raycast to layers, or leave blank for all")]
+        [Tooltip("Raycast to layers, or leave blank for all")]
         public string[] layers;
+        [Tooltip("Only raycast the first object")]
+        public bool firstRaycastOnly = true;
 
     	void Start() {
             if (button == null)
@@ -33,27 +35,54 @@ namespace CUVR{
                 layerMask = LayerMask.GetMask(layers);
         }
 
+
         void Update() {
 
             if (alwaysActive || button != null && button.click > .5f)
             {
                 RaycastHit[] hits = new RaycastHit[0];
+                RaycastHit hit = new RaycastHit();
 
-                if (useMouse)
+                if (firstRaycastOnly)
                 {
-                    if(layers.Length>0)
-                        hits = Physics.RaycastAll(Camera.main.ScreenPointToRay(Input.mousePosition),1e6f,layerMask);
+                    bool didHit;
+                    if (useMouse)
+                    {
+                        if (layers.Length > 0)
+                            didHit = Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 1e6f, layerMask);
+                        else
+                            didHit = Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit);
+                    }
                     else
-                        hits = Physics.RaycastAll(Camera.main.ScreenPointToRay(Input.mousePosition));
+                    {
+                        if (layers.Length > 0)
+                            didHit = Physics.Raycast(new Ray(this.transform.position, this.transform.forward), out hit, 1e6f, layerMask);
+                        else
+                            didHit = Physics.Raycast(new Ray(this.transform.position, this.transform.forward), out hit);
+                    }
+                    if (didHit)
+                    {
+                        hits = new RaycastHit[1];
+                        hits[0] = hit;
+                    }
                 }
                 else
                 {
-                    if (layers.Length > 0)
-                        hits = Physics.RaycastAll(new Ray(this.transform.position, this.transform.forward),1e6f,layerMask);
+                    if (useMouse)
+                    {
+                        if (layers.Length > 0)
+                            hits = Physics.RaycastAll(Camera.main.ScreenPointToRay(Input.mousePosition), 1e6f, layerMask);
+                        else
+                            hits = Physics.RaycastAll(Camera.main.ScreenPointToRay(Input.mousePosition));
+                    }
                     else
-                        hits = Physics.RaycastAll(new Ray(this.transform.position, this.transform.forward));
+                    {
+                        if (layers.Length > 0)
+                            hits = Physics.RaycastAll(new Ray(this.transform.position, this.transform.forward), 1e6f, layerMask);
+                        else
+                            hits = Physics.RaycastAll(new Ray(this.transform.position, this.transform.forward));
+                    }
                 }
-
                 if (hits.Length>0)
                 {
                     hitPosition = hits[0].point;
@@ -64,16 +93,17 @@ namespace CUVR{
                     if (button != null)
                         click = button.click;
                         
-                    foreach(RaycastHit h in hits)
+                    for(int i = 0; i < (firstRaycastOnly ? 1 : hits.Length); i ++)
                     {
-                        if (h.transform.gameObject.GetComponent<Interactable>() != null)
+                        print(hits[i].transform.gameObject.name);
+                        if (hits[i].transform.gameObject.GetComponent<Interactable>() != null)
                         {
-                            Interactable[] interactables = h.transform.gameObject.GetComponents<Interactable>();
-                            foreach (Interactable i in interactables)
+                            Interactable[] interactables = hits[i].transform.gameObject.GetComponents<Interactable>();
+                            foreach (Interactable t in interactables)
                             {
-                                i.Ping(this, click, type);
+                                t.Ping(this, click, type);
                             }
-                            if (h.transform.gameObject.GetComponent<Interactable_Blocker>() != null)
+                            if (hits[i].transform.gameObject.GetComponent<Interactable_Blocker>() != null)
                                 break;
                         }
 

@@ -8,26 +8,14 @@ namespace CUVR{
     {
         //navigate to the raycast position
         public GameObject target;
-        bool trigger;
-        bool prevTrigger;
+
 
         public override void HandleHover()
         {
-            if (clicked > .5f)
-            {
-                trigger = true;
-            }
-            else
-            {
-                trigger = false;
-            }
-
-            if (trigger && !prevTrigger)
+            if (gaze.button.buttonUp)
             {
                 HandleTrigger();
             }
-
-            print(trigger);
         }
 
         public override void HandleTrigger()
@@ -36,12 +24,5 @@ namespace CUVR{
             target.transform.position = gaze.hitPosition;
         }
 
-        public override void HandleUpdate()
-        {
-            base.HandleUpdate();
-            prevTrigger = trigger;
-
-            trigger = false;
-        }
     }
 }
