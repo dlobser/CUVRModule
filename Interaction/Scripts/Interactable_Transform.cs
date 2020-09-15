@@ -32,8 +32,10 @@ namespace CUVR{
                 trigger = false;
             }
         }
-        void Start()
+
+        public override void HandleStart()
         {
+            base.HandleStart();
             if (target == null)
                 target = this.gameObject;
             initPosition = target.transform.localPosition;

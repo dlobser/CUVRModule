@@ -15,8 +15,6 @@ namespace CUVR{
 
         public bool useMouse;
 
-    	public delegate void MouseHasHit();
-    	public static event MouseHasHit mouseHasHit;
         [Tooltip("Turn this off to only raycast when a button is clicked")]
         public bool alwaysActive = true;
         [Tooltip("Drag in a button component, or leave this slot empty")]
@@ -26,16 +24,14 @@ namespace CUVR{
         [Tooltip("Raycast to layers, or leave blank for all")]
         public string[] layers;
 
-    	void Start() {
+        void Start() {
             if (button == null)
                 alwaysActive = true;
             if(layers.Length>0)
                 layerMask = LayerMask.GetMask(layers);
         }
 
-
         void Update() {
-
             if (alwaysActive || button != null && button.click > .5f)
             {
                 RaycastHit hit = new RaycastHit();
@@ -55,7 +51,6 @@ namespace CUVR{
                     else
                         didHit = Physics.Raycast(new Ray(this.transform.position, this.transform.forward), out hit);
                 }
-           
                 if (didHit)
                 {
                     hitPosition = hit.point;
@@ -83,7 +78,6 @@ namespace CUVR{
                     hitObject = null;
                 }
             }
-
-    	}
+        }
     }
 }
