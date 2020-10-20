@@ -79,7 +79,7 @@ namespace CUVR{
 
         public virtual void HandleEnter(){
             if (debug)
-                Debug.Log("enter");
+                Debug.Log(this.gameObject.name + " enter");
         }
 
         public virtual void HandleHover(){

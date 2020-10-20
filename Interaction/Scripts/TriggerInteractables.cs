@@ -9,14 +9,28 @@ namespace CUVR{
         public bool trigger;
         public Interactable[] interactables;
 
-        void Update()
+        //void Update()
+        //{
+        //    base.up
+        //    //if (trigger)
+        //    //{
+        //    //    foreach(Interactable i in interactables)
+        //    //    {
+        //    //        i.HandleTrigger();
+        //    //    }
+        //    //}
+        //}
+
+        public override void HandleHover()
         {
-            if (trigger)
+            base.HandleHover();
+            if (clicked > .5f && !trigger)
             {
-                foreach(Interactable i in interactables)
-                {
-                    i.HandleTrigger();
-                }
+                HandleTrigger();
+                trigger = true;
+            }
+            else if (clicked < .5f && trigger)
+            {
                 trigger = false;
             }
         }
@@ -28,7 +42,6 @@ namespace CUVR{
             {
                 i.HandleTrigger();
             }
-            trigger = false;
         }
     }
 }
