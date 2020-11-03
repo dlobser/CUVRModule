@@ -26,4 +26,4 @@ Material:
     m_Floats: []
     m_Colors:
     - _Data: {r: 2.52, g: -0, b: 0.24, a: 0}
-    - _Light: {r: -1, g: 1.24, b: -0.11, a: 1}
+    - _Light: {r: 0, g: 1, b: 0, a: 1}
