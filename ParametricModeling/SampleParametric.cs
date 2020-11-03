@@ -51,7 +51,7 @@ public class SampleParametric : MonoBehaviour {
 	}
 
 	Vector3 Plane(float u, float v){
-        return new Vector3(u, v, 0);
+        return new Vector3(u-.5f, v-.5f, 0);
     }
 
     Vector3 Sphere(float u, float v)

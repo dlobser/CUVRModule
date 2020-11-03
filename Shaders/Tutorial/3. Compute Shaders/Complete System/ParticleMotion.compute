@@ -1,0 +1,176 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel InitParticles
+#pragma kernel UpdateParticles
+
+#define MODULE_2_4
+#define NUM_THREADS 8
+
+// Include Particle Struct
+#include "../Shared/Types.hlsl"
+
+// Include Noise Functions
+#include "../Shared/noise.cginc"
+
+// x: Time.time
+// y: Time.deltaTime
+// z: Time.smoothDeltaTime
+// w: Time.unscaledDeltaTime
+float4 _time;
+
+float3 _constantForce;
+float3 _noiseForce;
+float _noiseFreq;
+float _noiseSpeed;
+
+float _dampingCoeff;
+float _sphereSize;
+
+float3 _emitterPos;
+
+float2 _lifeRandom;
+
+// Read-Write stuctured buffer with our custom data structure
+RWStructuredBuffer<Particle> ParticleBuffer;
+
+#ifdef MODULE_2_4
+// Readonly structured buffer for forces
+StructuredBuffer<Force> ForceBuffer;
+#endif
+
+int _numForces;
+
+// Pseudo random number generator (prng) taken from
+// https://github.com/keijiro/ComputePrngTest
+// Hash function from H. Schechter & R. Bridson, goo.gl/RXiKaH
+uint Hash(uint s)
+{
+	s ^= 2747636419u;
+    
+	s *= 2654435769u;
+	s ^= s >> 16;
+	s *= 2654435769u;
+	s ^= s >> 16;
+	s *= 2654435769u;
+	return s;
+}
+
+float Random(uint seed)
+{
+	return float(Hash(seed)) / 4294967295.0; // 2^32-1
+}
+
+// More or less from here: 
+// https://www.gamedev.net/forums/topic/652701-generating-random-points-in-a-sphere/
+float3 random_inside_sphere(uint id)
+{
+	float u1 = 2 * (Random(id) - .5);
+	float u2 = Random(id - 2346);
+	float r = sqrt(1.0f - u1 * u1);
+	float theta = 2.0f*3.1416*u2;
+
+	return _sphereSize * Random(id + 901)*float3(r*cos(theta), r*sin(theta), u1);
+}
+
+Particle spawn_particle_for_id(uint id)
+{
+	Particle p;
+	p.position = random_inside_sphere(id) + _emitterPos;
+	p.velocity = 0;
+	// add a little extra random
+	p.mass = (Random(id.x) + Random(id.x + 342) + Random(id.x - 82024)) / 3;
+	p.age = 0;
+	p.life = Random(id.x + _time)*(_lifeRandom.y - _lifeRandom.x) + _lifeRandom.x;
+
+	return p;
+}
+
+float3 noise(float3 pos)
+{
+	float3 noise3 = float3(
+		snoise(float4(_noiseFreq*pos, _noiseSpeed*_time.x)),
+		snoise(float4(_noiseFreq*pos + float3(2132.63453, 41.345, 41223.643), _noiseSpeed*_time.x)),
+		snoise(float4(_noiseFreq*pos - float3(1231.14124, 984322.3242, 3423.532), _noiseSpeed*_time.x))
+		);
+
+	return noise3;
+}
+
+#ifdef MODULE_2_4
+float3 external_forces(uint id)
+{
+	float3 force = 0;
+	Particle p = ParticleBuffer[id];
+
+	// OK to do for small numbers, wouldn't want to do this with many forces
+	for (int i = 0; i < _numForces; i++)
+	{
+		Force f = ForceBuffer[i];
+		float3 dir = f.position - p.position;
+		float dist = length(dir);
+
+		if (dist < 0.0001)
+			continue;
+
+		force += -(1 / (max(dist*dist*dist, 10)))*(1 - step(f.range, dist))*dir*f.force;
+	}
+
+	return force;
+}
+#endif
+
+[numthreads(NUM_THREADS, 1, 1)]
+void InitParticles(uint3 id : SV_DispatchThreadID)
+{
+	// TODO: insert actual code here!
+	Particle p = spawn_particle_for_id(id.x);
+
+	ParticleBuffer[id.x] = p;
+}
+
+float3 sum_forces(uint id)
+{
+	Particle p = ParticleBuffer[id];
+
+	float3 force = 0;
+	force += _constantForce;
+	force += _noiseForce * noise(p.position);
+
+#ifdef MODULE_2_4
+	force += external_forces(id);
+#endif
+
+	// Add damping force
+	force += -_dampingCoeff * p.velocity;
+
+	return force;
+}
+
+
+
+[numthreads(NUM_THREADS, 1, 1)]
+void UpdateParticles(uint3 id : SV_DispatchThreadID)
+{
+
+	Particle p = ParticleBuffer[id.x];
+
+	if (p.age > p.life) {
+		ParticleBuffer[id.x] = spawn_particle_for_id(id.x);
+		return;
+	}
+
+	float3 force = sum_forces(id.x);
+
+	// Add force to particle (scaled by mass)
+	p.velocity += force * (1 / p.mass);
+
+	// Integrate motion velocity * delta time
+	p.position += p.velocity * _time.y;
+
+	if (length(p.velocity) > 0) 
+		p.velocity = normalize(p.velocity)*min(length(p.velocity), 50);
+	 
+	// Add delta time to age
+	p.age += _time.y;
+
+	ParticleBuffer[id.x] = p;
+}

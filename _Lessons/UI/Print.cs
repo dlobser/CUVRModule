@@ -7,8 +7,8 @@ namespace CUVR{
     {
         public string toPrint;
 
-        public void PrintString(){
-            print(toPrint);
+        public void PrintString(string printMe){
+            print(printMe);
         }
 
 

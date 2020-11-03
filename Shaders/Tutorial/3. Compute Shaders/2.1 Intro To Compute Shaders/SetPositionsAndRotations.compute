@@ -1,0 +1,42 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+
+// Don't need RWTexture2D since we're only reading
+Texture2D<float4> _InputTex;
+
+float2 _InputTexResolution;
+
+float2 _PlaneDims;
+RWStructuredBuffer<float3> _PositionsBuffer;
+RWStructuredBuffer<float3> _RotationsBuffer;
+RWStructuredBuffer<float3> _ScalesBuffer;
+RWStructuredBuffer<float4> _ColorBuffer;
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+	// Flatten array index from 2D to 1D
+	uint idx = id.x*_PlaneDims.x + id.y;
+
+	// Get 0..1 position of id to sample texture
+	float2 uv = float2(id.x, id.y) / _PlaneDims;
+	uv *= _InputTexResolution;
+
+	// Sample texture
+	float4 posRot = _InputTex[uv];
+	_ColorBuffer[idx] = posRot;
+
+	// Set Positions and Rotations
+	float3 pos = _PositionsBuffer[idx];
+	pos.y = posRot.x;
+
+	_PositionsBuffer[idx] = pos;
+
+	float3 rot = _RotationsBuffer[idx];
+	rot.y = posRot.y;
+
+	_RotationsBuffer[idx] = posRot.xyz;
+
+	_ScalesBuffer[idx] = saturate(float3(.8*posRot.x + .2, posRot.y + .2, .8*posRot.x + .2));
+}

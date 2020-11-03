@@ -1,0 +1,59 @@
+﻿#pragma kernel UpdateParticles
+
+#define NUM_THREADS 128
+
+#include "../Shared/Types.hlsl"
+// Include Noise Functions
+#include "../Shared/noise.cginc"
+#include "../Shared/random.hlsl"
+
+float4 _time;
+
+float3 _forcePosition;
+float _forceStrength;
+
+float _dampingCoeff;
+
+// Read-Write stuctured buffer with our custom data structure
+RWStructuredBuffer<ParticleBasic> ParticleBuffer;
+
+Particle spawn_particle_for_id(uint id)
+{
+	// TODO: spawn a particle
+}
+
+
+float3 sum_forces(uint id)
+{
+	ParticleBasic p = ParticleBuffer[id];
+
+	float3 vecToForce = _forcePosition - p.position;
+	float distToForce = length(vecToForce);
+
+	float3 force = 0;
+	force += -(1 / (max(pow(distToForce,3), .2))) * vecToForce * _forceStrength;
+
+	// Add damping force
+	force += -_dampingCoeff * p.velocity;
+
+	return force;
+}
+
+
+[numthreads(NUM_THREADS, 1, 1)]
+void UpdateParticles(uint3 id : SV_DispatchThreadID)
+{
+
+	ParticleBasic p = ParticleBuffer[id.x];
+
+
+	float3 force = sum_forces(id.x);
+
+	// Add force to particle
+	p.velocity += force;
+
+	// Integrate motion velocity * delta time
+	p.position += p.velocity * _time.y;
+
+	ParticleBuffer[id.x] = p;
+}
